@@ -186,7 +186,7 @@ class WallpaperChanger(Changer):
         else:
             raise KeyError(f'Bad name or id: "{name}"')
 
-        wp_type = wp_data[name_id]['type']
+        wp_type = wp_data[name_id]['type'].lower()
         self.handler.send_cmd('WallpaperWorkShopId', name_id)
 
         tail = wp_data[name_id]['file'] + '+' + wp_type
@@ -205,26 +205,28 @@ class WallpaperChanger(Changer):
 
     def setup_random(self, **filters):
         wp_ids = self.handler.get_ids()
+        new_ids = {}
         for name, val in filters.items():
-            for id, data in wp_ids:
-                if val is list:
-                    if data[name] not in val:
-                        del wp_ids[id]
+            for id, data in wp_ids.items():
+                if isinstance(val, list):
+                    if data.get(name, ['Unspecified'])[0] in val:
+                        new_ids[id] = data
                 if val in (int, float, str):
-                    if data[name] != val:
-                        del wp_ids[id]
-        if len(wp_ids) == 0:
+                    if data.get(name, ['Unspecified'])[0] == val:
+                        new_ids[id] = data
+
+        if len(new_ids) == 0:
             raise ValueError(
                 f"Could not find wallpapers with this filters: {filters}")
 
         last_ids = self.handler.get_data('prev_ids')
         weights = []
-        for id in wp_ids:
+        for id in new_ids:
             if id in last_ids:
                 weights.append(0.1)
             else:
                 weights.append(1)
-        if self.setup(choices(list(wp_ids.keys()), weights=weights)):
+        if self.setup(choices(list(new_ids.keys()), weights=weights)):
             print(
                 f'setup_random failed because got non-existent id, recursive calling itself again')
             self.setup_random(**filters)
@@ -359,6 +361,7 @@ class Plugin:
             self.wp_changer.setup(args.name_or_id)
         elif args.command == 'random':
             filters = {}
+            args = parser.parse_args(sys.argv[2:])
             if hasattr(args, 'type'):
                 if args.type:
                     filters['type'] = args.type.split(',')
@@ -368,7 +371,6 @@ class Plugin:
             if hasattr(args, 'tags'):
                 if args.tags:
                     filters['tags'] = args.tags.split(',')
-
             self.wp_changer.setup_random(**filters)
 
         elif args.command == 'name':
