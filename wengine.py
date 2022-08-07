@@ -1,0 +1,210 @@
+import argparse
+import re
+import sys
+from pathlib import Path
+
+from changers import SettingsChanger, WallpaperChanger
+from config_handler import ConfigHandler
+
+
+class Plugin:
+    def __init__(self) -> None:
+        home_dir = Path().home()
+        if not home_dir.exists():
+            raise FileNotFoundError(
+                'Please setup your "$HOME" environment variable')
+        self.config_path = Path('~/.config/WPE-cli/config.json').expanduser()
+        self.handler = ConfigHandler(self.config_path)
+        self.steamdir = self.handler.get_data('steam_dir')
+
+        self.wp_changer = WallpaperChanger(self.steamdir, self.config_path)
+        self.settings_changer = SettingsChanger(
+            self.steamdir, self.config_path)
+
+        parser = argparse.ArgumentParser(
+            description='CLI addon for Wallpaper Engine KDE tool',
+            usage='''wengine <command> [<args>]
+
+        Commands:
+           wallpaper - Operations with wallpaper
+           settings  - Change settings in Wallpaper Engine
+           update    - Update list of installed wallpapers
+           config    - Change specified configs 
+           pull      - Pull data about current wallpaper and SteamLibrary from
+                       Wallpaper Engine
+           undo      - Undo last change, useful then you get a black screen
+        ''')
+        self.parser_0 = parser
+        parser.add_argument('command', help='Subcommand to run')
+
+        # parser.add_argument('--random', action=argparse.BooleanOptionalAction,
+        #                     help='Setup random wallpaper from WallpaperEngine directory', default=False)
+        # parser.add_argument('--undo', action=argparse.BooleanOptionalAction,
+        #                     help='Return previous wallpaper. Useful then you got a black screen', default=False)
+        # parser.add_argument('--version', action='version', version='%(prog)s 0.1')
+        # parser.add_argument('--steamdir', type=Path,
+        #                     help='Specify your Steam directory with this argument')
+        # parser.add_argument('--verbose', action=argparse.BooleanOptionalAction,
+        #                     help='Debug utility', default=False)
+
+        args = parser.parse_args(sys.argv[1:2])
+        if not hasattr(self, args.command):
+            self.help()
+        getattr(self, args.command)()
+
+    def config(self):
+        parser = argparse.ArgumentParser(
+            description='Operations with wallpaper',
+            usage='''wengine config <command> <flags>
+
+        Commands:
+            setup  - setup config
+            get    - get config
+
+        ''')
+
+        parser.add_argument('command', help='Subcommand to run')
+        args = parser.parse_args(sys.argv[2:3])
+        if args.command == 'setup':
+            pass
+        elif args.command == 'get':
+            pass
+        else:
+            self.help(parser)
+
+    def pull(self):
+        settings_path = Path(
+            "~/.config/plasma-org.kde.plasma.desktop-appletsrc").expanduser()
+        patterns = {
+            "steam_dir": re.compile(r"SteamLibraryPath.+"),
+            "WallpaperWorkShopIdOld": re.compile(r"WallpaperWorkShopId.+"),
+            "WallpaperSourceOld": re.compile(r"WallpaperSource.+"),
+        }
+
+        pattern_path = re.compile(r"file://(.+)")
+        pattern_digits = re.compile(r"\d+")
+        pattern_types = {
+            "steam_dir": (pattern_path, 1),
+            "WallpaperWorkShopIdOld": (pattern_digits, 0),
+            "WallpaperSourceOld": (pattern_path, 0),
+        }
+
+        with open(settings_path, 'r') as file:
+            for line in file:
+                for config, pattern in patterns.items():
+                    if pattern.match(line):
+                        pattern_type, pos = pattern_types[config]
+                        match = pattern_type.search(line)
+                        if match is not None:
+                            data = match.group(pos)
+                            self.handler.add_pos(config, data)
+
+    def wallpaper(self):
+        parser = argparse.ArgumentParser(
+            description='Operations with wallpaper',
+            usage='''wengine wallpaper <command> <flags>
+
+        Commands:
+            setup  - setup wallpaper by id or name
+            random - setup random wallpaper. You can specify filters with
+                     arguments --type, --contentrating, --tags.
+                     (for example choose random wallpaper from nature scenes:
+                         ... random --type scenes --tags Nature)
+            name   - get current wallpaper name and id
+                     in format: <id> "name".
+            accent - get wallpaper's accent color in RGB uint8 format:
+                     R G B
+            get    - get info about the wallpaper from its config
+
+        ''')
+
+        parser.add_argument('command', help='Subcommand to run')
+
+        parser.add_argument(
+            '--type', help='random: Type of wallpapers to choose from. Syntax: "--type scene,video,web"')
+        parser.add_argument(
+            '--contentrating', help='random: Filter out NSFW wallpapers and vice versa. Syntax: "--contentrating Everyone,Mature" (Note! starts with capital letter)', )
+        parser.add_argument(
+            '--tags', help='random: Filter by tags specified in wallpaper description. Syntax: "--tags Nature,Anime,Game"')
+
+        args = parser.parse_args(sys.argv[2:3])
+        if args.command == 'setup':
+            parser.add_argument(
+                'name_or_id', help='Title of the wallpaper or its id')
+            args = parser.parse_args(sys.argv[2:])
+            self.wp_changer.setup(args.name_or_id)
+        elif args.command == 'random':
+            filters = {}
+            args = parser.parse_args(sys.argv[2:])
+            if hasattr(args, 'type'):
+                if args.type:
+                    filters['type'] = args.type.split(',')
+            if hasattr(args, 'contentrating'):
+                if args.contentrating:
+                    filters['contentrating'] = args.contentrating.split(',')
+            if hasattr(args, 'tags'):
+                if args.tags:
+                    filters['tags'] = args.tags.split(',')
+            self.wp_changer.setup_random(**filters)
+
+        elif args.command == 'name':
+            id, name = self.wp_changer.get_last_id_name()
+            print(f'<{id}> "{name}"')
+
+        elif args.command == 'accent':
+            id, _ = self.wp_changer.get_last_id_name()
+            wp_data = self.handler.get_data(id)
+            rgb_str = wp_data['general']['properties']['schemecolor']['value']
+            rgb_vals = [int(float(val)*255) for val in rgb_str.split()]
+            print("{} {} {}".format(*rgb_vals))
+
+        elif args.command == 'get':
+            id, _ = self.wp_changer.get_last_id_name()
+            wp_data = self.handler.get_data(id)
+
+            def recursion_dict_printer(my_dict, level=0):
+                for name, val in my_dict.items():
+                    if isinstance(val, dict):
+                        recursion_dict_printer(my_dict[name], level+1)
+                    else:
+                        print(f'{"  "*level} {name}="{val}"')
+            recursion_dict_printer(wp_data)
+        else:
+            self.help(parser)
+
+    def undo(self):
+        id = self.handler.get_data('WallpaperWorkShopIdOld')
+        self.wp_changer.setup(id)
+
+    def update(self):
+        self.wp_changer.get_all_data()
+
+    def settings(self):
+        parser = argparse.ArgumentParser(
+            description='Change settings for Wallpaper Engine',
+            usage='''wengine settings <command> <flags>
+
+        Commands:
+            setup - setup specific setting for Wallpaper Engine
+            get   - get specific setting
+        ''')
+
+        parser.add_argument('command', help='Subcommand to run')
+        args = parser.parse_args(sys.argv[2:3])
+        if args.command == 'setup':
+            pass
+        elif args.command == 'get':
+            pass
+        else:
+            self.help(parser)
+
+    def help(self, parser=None, /):
+        if parser is None:
+            parser = self.parser_0
+        print('Unrecognized command')
+        parser.print_help()
+        exit(1)
+
+
+if __name__ == "__main__":
+    Plugin()
