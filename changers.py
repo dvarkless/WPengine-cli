@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from difflib import SequenceMatcher
 from pathlib import Path
 from random import choices
@@ -8,6 +9,10 @@ from config_handler import ConfigHandler
 
 
 class SettingsChanger():
+    __header_regex = \
+        r".+\[Wallpaper\]\[com\.github\.casout\.wallpaperEngineKde\]\[General\]"
+    __kde_config_path = Path(
+        "~/.config/plasma-org.kde.plasma.desktop-appletsrc").expanduser()
     def __init__(self, steampath, config_path) -> None:
         self._steampath = Path(steampath)
         self.handler = ConfigHandler(config_path)
@@ -17,8 +22,81 @@ class SettingsChanger():
         self.full_path = self._steampath / \
             Path('steamapps/workshop/content') / wpe_id
 
-    def setup(self):
-        raise NotImplementedError
+        self.name_to_pattern = {
+            'DisplayMode': re.compile(r"DisplayMode=(\d+)"),
+            'Fps': re.compile(r"Fps=(\d+)"),
+            'MuteAudio': re.compile(r"MuteAudio=(\w+)"),
+            'SortMode': re.compile(r"SortMode=(\d)"),
+            'SteamLibraryPath': re.compile(r"SteamLibraryPath.+=file://(.+)"),
+            'Volume': re.compile(r"Volume=(\d+)"),
+            'WallpaperSource': re.compile(r"WallpaperSource.+.+=(file://.+)"),
+            'WallpaperWorkShopId': re.compile(r"WallpaperWorkShopId=(\d+)"),
+        }
+        self.name_type_check = {
+            'DisplayMode': lambda x: int(x) >= 0 and int(x) < 20,
+            'Fps': lambda x: int(x) > 0 and int(x) <= 60,
+            'MuteAudio': lambda x: x in ("false", "true"),
+            'SortMode': lambda x: x in "123",
+            'SteamLibraryPath': lambda x: isinstance(x, str),
+            'Volume': lambda x: int(x) >= 0 and int(x) <= 100,
+            'WallpaperSource': lambda x: isinstance(x, str),
+            # Basically check if int(x) is possible
+            'WallpaperWorkShopId': lambda x: isinstance(int(x), int),
+        }
+        self.start_line = self.get_start_line()
+
+    @property
+    def settings_list(self):
+        return list(self.name_to_pattern.keys())
+
+    @settings_list.setter
+    def settings_list(self, _):
+        pass
+
+    def setup(self, name, val):
+        if not (name in self.name_to_pattern.keys()):
+            raise KeyError(f'Passed name - "{name}" is an unknown setting')
+        if not self.name_type_check[name](val):
+            raise ValueError(f'Invalid value ({val}) for setting "{name}"')
+
+        self.handler.send_cmd(name, val)
+
+    def read(self, setting=None):
+        if setting is not None:
+            if setting not in self.name_to_pattern.keys():
+                raise KeyError(f"Bad setting name - '{setting}'")
+
+        return_list = []
+        chapter_end_pattern = re.compile(r"\n\n")
+        with open(SettingsChanger.__kde_config_path, 'r') as file:
+            for i, line in enumerate(file):
+                if i < getattr(self, 'start_line', -1):
+                    continue
+
+                if setting is not None:
+                    pattern_iter = [(setting, self.name_to_pattern[setting])]
+                else:
+                    pattern_iter = self.name_to_pattern.items()
+
+                for name, pattern in pattern_iter:
+                    match = pattern.search(line)
+                    if match:
+                        return_list.append((name, match.group(1)))
+
+                if chapter_end_pattern.match(line):
+                    break # Used to not possibly overwrite found settings
+
+        return return_list
+
+    def get_start_line(self):
+        pattern = re.compile(SettingsChanger.__header_regex)
+        with open(SettingsChanger.__kde_config_path, 'r') as file:
+            for i, line in enumerate(file):
+                if pattern.match(line):
+                    return i
+            else:
+                raise ValueError(
+                    "WallpaperEngine settings are not found in plasma config")
 
 
 class WallpaperChanger():
@@ -61,8 +139,9 @@ class WallpaperChanger():
                 break
             else:
                 if isinstance(vals, dict):
-                    if SequenceMatcher(a=name, b=vals['title']).ratio() > 0.8:
-                        break
+                    SequenceMatcher(
+                        a=name.casefold(), b=vals['title'].casefold()).real_quick_ratio()
+                    break
         else:
             raise KeyError(f'Bad name or id: "{name}"')
 
@@ -79,11 +158,13 @@ class WallpaperChanger():
                 print(f'error path: "{wp_path}"')
                 raise KeyError(
                     f'This id not exists: "{id}" with name "{name}"')
-        # add file:// if as_uri raises exception
+        # wp_path.as_uri() breaks encoding
         self.handler.send_cmd('WallpaperSource', 'file://'+str(wp_path))
         self.handler.update_last_ids(id)
 
     def setup_random(self, **filters):
+        # TODO: instead of returning first file with >80% coincedence
+        # get a list with % coincedence and return file with biggest % > 50%
         wp_ids = self.handler.get_ids()
         new_ids = {}
         for name, val in filters.items():
@@ -94,7 +175,8 @@ class WallpaperChanger():
                 if val in (int, float, str):
                     if data.get(name, ['Unspecified'])[0] == val:
                         new_ids[id] = data
-
+        if len(filters) == 0:
+            new_ids = wp_ids
         if len(new_ids) == 0:
             raise ValueError(
                 f"Could not find wallpapers with this filters: {filters}")

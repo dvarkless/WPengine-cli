@@ -6,13 +6,13 @@ import dbus
 
 class ConfigHandler:
     __template = {
-        'steam_dir': '/path/to/SteamLibrary',
+        'SteamLibraryPath': '/path/to/SteamLibrary',
         'last_id': '000000',
         'prev_ids': ['000', '001', '002', '003'],
         'WallpaperEngineSteamID': '431960',
         'WallpaperProjectName': 'project.json',
-        'WallpaperWorkShopIdOld': '12345',
-        'WallpaperSourceOld': 'path/to/wallpaper',
+        'WallpaperWorkShopId': '12345',
+        'WallpaperSource': 'path/to/wallpaper',
     }
 
     def __init__(self, config_path: Path) -> None:

@@ -73,31 +73,39 @@ class Plugin:
             self.help(parser)
 
     def pull(self):
-        settings_path = Path(
-            "~/.config/plasma-org.kde.plasma.desktop-appletsrc").expanduser()
-        patterns = {
-            "steam_dir": re.compile(r"SteamLibraryPath.+"),
-            "WallpaperWorkShopIdOld": re.compile(r"WallpaperWorkShopId.+"),
-            "WallpaperSourceOld": re.compile(r"WallpaperSource.+"),
-        }
+        settings_list = self.settings_changer.read()
+        for setting_tuple in settings_list:
+            self.handler.add_pos(*setting_tuple)
 
-        pattern_path = re.compile(r"file://(.+)")
-        pattern_digits = re.compile(r"\d+")
-        pattern_types = {
-            "steam_dir": (pattern_path, 1),
-            "WallpaperWorkShopIdOld": (pattern_digits, 0),
-            "WallpaperSourceOld": (pattern_path, 0),
-        }
-
-        with open(settings_path, 'r') as file:
-            for line in file:
-                for config, pattern in patterns.items():
-                    if pattern.match(line):
-                        pattern_type, pos = pattern_types[config]
-                        match = pattern_type.search(line)
-                        if match is not None:
-                            data = match.group(pos)
-                            self.handler.add_pos(config, data)
+    # def pull(self):
+    #     if setting_name is not None:
+    #         if setting_name not in ():
+    #             pass
+    #     settings_path = Path(
+    #         "~/.config/plasma-org.kde.plasma.desktop-appletsrc").expanduser()
+    #     patterns = {
+    #         "steam_dir": re.compile(r"SteamLibraryPath.+"),
+    #         "WallpaperWorkShopIdOld": re.compile(r"WallpaperWorkShopId.+"),
+    #         "WallpaperSourceOld": re.compile(r"WallpaperSource.+"),
+    #     }
+    #
+    #     pattern_path = re.compile(r"file://(.+)")
+    #     pattern_digits = re.compile(r"\d+")
+    #     pattern_types = {
+    #         "steam_dir": (pattern_path, 1),
+    #         "WallpaperWorkShopIdOld": (pattern_digits, 0),
+    #         "WallpaperSourceOld": (pattern_path, 0),
+    #     }
+    #
+    #     with open(settings_path, 'r') as file:
+    #         for line in file:
+    #             for config, pattern in patterns.items():
+    #                 if pattern.match(line):
+    #                     pattern_type, pos = pattern_types[config]
+    #                     match = pattern_type.search(line)
+    #                     if match is not None:
+    #                         data = match.group(pos)
+    #                         self.handler.add_pos(config, data)
 
     def wallpaper(self):
         parser = argparse.ArgumentParser(
@@ -173,8 +181,13 @@ class Plugin:
             self.help(parser)
 
     def undo(self):
-        id = self.handler.get_data('WallpaperWorkShopIdOld')
-        self.wp_changer.setup(id)
+        undoable_settings = self.settings_changer.settings_list
+        for setting in undoable_settings:
+            if setting in ("SteamLibraryPath"):
+                continue
+            val = self.handler.get_data(setting)
+            print(f"undo {setting}={val}")
+            self.settings_changer.setup(setting, val)
 
     def update(self):
         self.wp_changer.get_all_data()
