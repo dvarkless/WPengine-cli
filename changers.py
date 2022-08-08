@@ -168,18 +168,23 @@ class WallpaperChanger():
         # wp_path.as_uri() breaks encoding
         self.handler.send_cmd('WallpaperSource', 'file://'+str(wp_path))
         self.handler.update_last_ids(id)
+    
+    def _parse_into_str(self, data, name):
+        out = data.get(name, 'Unspecified')
+        if isinstance(out, list):
+            return out[0]
+        if isinstance(out, tuple):
+            return out[0]
+        else:
+            return str(out)
 
-    def setup_random(self, *, filters, fuzzy=True):
+    def setup_random(self, *, filters={}, fuzzy=True):
         wp_ids = self.handler.get_ids()
         new_ids = {}
-        for name, val in filters.items():
-            for id, data in wp_ids.items():
-                if isinstance(val, list):
-                    if data.get(name, 'Unspecified') in val:
-                        new_ids[id] = data
-                if val in (int, float, str):
-                    if data.get(name, 'Unspecified') == val:
-                        new_ids[id] = data
+        for id, data in wp_ids.items():
+            # Check if value in data also contains in filters
+            if all([self._parse_into_str(data, name) in val for name, val in filters.items()]): 
+                new_ids[id] = data
         if not filters:
             new_ids = wp_ids
         if not new_ids:
