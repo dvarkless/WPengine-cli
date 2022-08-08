@@ -1,5 +1,4 @@
 import argparse
-import re
 import sys
 from pathlib import Path
 
@@ -15,7 +14,7 @@ class Plugin:
                 'Please setup your "$HOME" environment variable')
         self.config_path = Path('~/.config/WPE-cli/config.json').expanduser()
         self.handler = ConfigHandler(self.config_path)
-        self.steamdir = self.handler.get_data('steam_dir')
+        self.steamdir = self.handler.get_data('SteamLibraryPath')
 
         self.wp_changer = WallpaperChanger(self.steamdir, self.config_path)
         self.settings_changer = SettingsChanger(
@@ -77,39 +76,10 @@ class Plugin:
         for setting_tuple in settings_list:
             self.handler.add_pos(*setting_tuple)
 
-    # def pull(self):
-    #     if setting_name is not None:
-    #         if setting_name not in ():
-    #             pass
-    #     settings_path = Path(
-    #         "~/.config/plasma-org.kde.plasma.desktop-appletsrc").expanduser()
-    #     patterns = {
-    #         "steam_dir": re.compile(r"SteamLibraryPath.+"),
-    #         "WallpaperWorkShopIdOld": re.compile(r"WallpaperWorkShopId.+"),
-    #         "WallpaperSourceOld": re.compile(r"WallpaperSource.+"),
-    #     }
-    #
-    #     pattern_path = re.compile(r"file://(.+)")
-    #     pattern_digits = re.compile(r"\d+")
-    #     pattern_types = {
-    #         "steam_dir": (pattern_path, 1),
-    #         "WallpaperWorkShopIdOld": (pattern_digits, 0),
-    #         "WallpaperSourceOld": (pattern_path, 0),
-    #     }
-    #
-    #     with open(settings_path, 'r') as file:
-    #         for line in file:
-    #             for config, pattern in patterns.items():
-    #                 if pattern.match(line):
-    #                     pattern_type, pos = pattern_types[config]
-    #                     match = pattern_type.search(line)
-    #                     if match is not None:
-    #                         data = match.group(pos)
-    #                         self.handler.add_pos(config, data)
-
     def wallpaper(self):
         parser = argparse.ArgumentParser(
-            description='Operations with wallpaper',
+            description='Operations with wallpaper')
+        """
             usage='''wengine wallpaper <command> <flags>
 
         Commands:
@@ -125,16 +95,20 @@ class Plugin:
             get    - get info about the wallpaper from its config
 
         ''')
-
+        """
         parser.add_argument('command', help='Subcommand to run')
 
         parser.add_argument(
-            '--type', help='random: Type of wallpapers to choose from. Syntax: "--type scene,video,web"')
+            '--type', help='random: Type of wallpapers to choose from. Syntax: "--type scene,video,web"', choices=['scene', 'video', 'web'])
         parser.add_argument(
-            '--contentrating', help='random: Filter out NSFW wallpapers and vice versa. Syntax: "--contentrating Everyone,Mature" (Note! starts with capital letter)', )
+            '--contentrating', help='random: Filter out NSFW wallpapers and vice versa. Syntax: "--contentrating Everyone,Mature" (Note! starts with capital letter)', choices=['Everyone', 'Questionable', 'Mature'])
         parser.add_argument(
             '--tags', help='random: Filter by tags specified in wallpaper description. Syntax: "--tags Nature,Anime,Game"')
+        parser.add_argument(
+            '--strict', help='random: disable fuzzy finder then searching by title', action=argparse.BooleanOptionalAction, default='False')
 
+        parser.add_argument(
+            '--nsfw', help='random: add wallpapers with rating "Mature" into the mix', action=argparse.BooleanOptionalAction, default='False')
         args = parser.parse_args(sys.argv[2:3])
         if args.command == 'setup':
             parser.add_argument(
@@ -153,7 +127,10 @@ class Plugin:
             if hasattr(args, 'tags'):
                 if args.tags:
                     filters['tags'] = args.tags.split(',')
-            self.wp_changer.setup_random(**filters)
+            if args.nsfw:
+                if 'contentrating' not in filters.keys():
+                    filters['contentrating'] = ['Everyone', 'Unspecified', 'Questionable']
+            self.wp_changer.setup_random(filters=filters, fuzzy=not args.strict)
 
         elif args.command == 'name':
             id, name = self.wp_changer.get_last_id_name()
@@ -186,7 +163,6 @@ class Plugin:
             if setting in ("SteamLibraryPath"):
                 continue
             val = self.handler.get_data(setting)
-            print(f"undo {setting}={val}")
             self.settings_changer.setup(setting, val)
 
     def update(self):
@@ -203,11 +179,19 @@ class Plugin:
         ''')
 
         parser.add_argument('command', help='Subcommand to run')
-        args = parser.parse_args(sys.argv[2:3])
+        parser.add_argument(
+            'setting_name', help='Name of the setting to change or print')
+        args = parser.parse_args(sys.argv[2:4])
         if args.command == 'setup':
-            pass
+            parser.add_argument('setting_val', help='Subcommand to run')
+            args = parser.parse_args(sys.argv[2:5])
+
+            setting = args.setting_name
+            val = args.setting_val
+            self.settings_changer.setup(setting, val)
         elif args.command == 'get':
-            pass
+            setting = args.setting_name
+            print(self.settings_changer.read(setting))
         else:
             self.help(parser)
 

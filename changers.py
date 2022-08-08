@@ -128,22 +128,29 @@ class WallpaperChanger():
             raise FileNotFoundError(f'Could not find wallpaper by id:{id}')
         return id, name
 
-    def setup(self, name, silent_delete=False):
+    def setup(self, name, *, silent_delete=False, fuzzy=True):
         if type(name) in (tuple, list, set):
             name = name[0]
         name_id = None
-        wp_data = self.handler.get_data()
+        wp_data = self.handler.get_ids()
+        compare_results = []
         for id, vals in wp_data.items():
             name_id = id
             if name == id:
                 break
-            else:
-                if isinstance(vals, dict):
-                    SequenceMatcher(
-                        a=name.casefold(), b=vals['title'].casefold()).real_quick_ratio()
-                    break
+            if name.isdigit():
+                continue
+            s = SequenceMatcher(a=name.casefold(), b=vals['title'].casefold())
+            ratio = s.quick_ratio()
+            len_match = s.find_longest_match().size
+            if ratio > 0.6 if fuzzy else 0.95:
+                compare_results.append((id, ratio*len_match))
         else:
-            raise KeyError(f'Bad name or id: "{name}"')
+            if not compare_results:
+                raise KeyError(f'Bad name or id: "{name}"')
+            else: 
+                compare_results.sort(key=lambda x: x[1], reverse=True)
+                name_id = compare_results[0][0]
 
         wp_type = wp_data[name_id]['type'].lower()
         self.handler.send_cmd('WallpaperWorkShopId', name_id)
@@ -162,22 +169,20 @@ class WallpaperChanger():
         self.handler.send_cmd('WallpaperSource', 'file://'+str(wp_path))
         self.handler.update_last_ids(id)
 
-    def setup_random(self, **filters):
-        # TODO: instead of returning first file with >80% coincedence
-        # get a list with % coincedence and return file with biggest % > 50%
+    def setup_random(self, *, filters, fuzzy=True):
         wp_ids = self.handler.get_ids()
         new_ids = {}
         for name, val in filters.items():
             for id, data in wp_ids.items():
                 if isinstance(val, list):
-                    if data.get(name, ['Unspecified'])[0] in val:
+                    if data.get(name, 'Unspecified') in val:
                         new_ids[id] = data
                 if val in (int, float, str):
-                    if data.get(name, ['Unspecified'])[0] == val:
+                    if data.get(name, 'Unspecified') == val:
                         new_ids[id] = data
-        if len(filters) == 0:
+        if not filters:
             new_ids = wp_ids
-        if len(new_ids) == 0:
+        if not new_ids:
             raise ValueError(
                 f"Could not find wallpapers with this filters: {filters}")
 
@@ -188,7 +193,8 @@ class WallpaperChanger():
                 weights.append(0.1)
             else:
                 weights.append(1)
-        if self.setup(choices(list(new_ids.keys()), weights=weights)):
+
+        if self.setup(choices(list(new_ids.keys()), weights=weights), silent_delete=True, fuzzy=fuzzy):
             print(
                 f'setup_random failed because got non-existent id, recursive calling itself again')
-            self.setup_random(**filters)
+            self.setup_random(filters=filters, fuzzy=fuzzy)

@@ -39,7 +39,7 @@ class ConfigHandler:
         for name in data.keys():
             try:
                 int(name)
-            except:
+            except ValueError:
                 to_remove.append(name)
         for name in to_remove:
             del data[name]
