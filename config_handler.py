@@ -43,6 +43,9 @@ class ConfigHandler:
                 to_remove.append(name)
         for name in to_remove:
             del data[name]
+        if not data:
+            raise ValueError(
+                f"Cannot find wallpapers in config file, did you call 'wengine update'?")
         return data
 
     def update_last_ids(self, id, /):
