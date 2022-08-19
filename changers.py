@@ -125,7 +125,7 @@ class WallpaperChanger():
         try:
             name = data[id]['title']
         except:
-            raise FileNotFoundError(f'Could not find wallpaper by id:{id}')
+            raise FileNotFoundError(f'Could not find a wallpaper by id:{id}')
         return id, name
 
     def setup(self, name, *, silent_delete=False, fuzzy=True):
@@ -143,7 +143,7 @@ class WallpaperChanger():
             s = SequenceMatcher(a=name.casefold(), b=vals['title'].casefold())
             ratio = s.quick_ratio()
             len_match = s.find_longest_match().size
-            if ratio > 0.6 if fuzzy else 0.95:
+            if ratio > 0.5 if fuzzy else ratio > 0.95:
                 compare_results.append((id, ratio*len_match))
         else:
             if not compare_results:
@@ -180,6 +180,7 @@ class WallpaperChanger():
 
     def setup_random(self, *, filters={}, fuzzy=True):
         wp_ids = self.handler.get_ids()
+        all_data = self.handler.get_data()
         new_ids = {}
         for id, data in wp_ids.items():
             # Check if value in data also contains in filters
@@ -194,10 +195,14 @@ class WallpaperChanger():
         last_ids = self.handler.get_data('prev_ids')
         weights = []
         for id in new_ids:
+            try:
+                freq = all_data[id]['freq']
+            except KeyError:
+                freq = 1.0
             if id in last_ids:
-                weights.append(0.1)
+                weights.append(0.1*freq)
             else:
-                weights.append(1)
+                weights.append(freq)
 
         if self.setup(choices(list(new_ids.keys()), weights=weights), silent_delete=True, fuzzy=fuzzy):
             print(

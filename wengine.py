@@ -22,15 +22,15 @@ class Plugin:
         
         # defining argument parser:
         parser = argparse.ArgumentParser(
-            description='CLI addon for Wallpaper Engine KDE tool')
+            description='CLI for Wallpaper Engine KDE tool')
         subparsers = parser.add_subparsers(dest='command')
-        wallpaper_parser = subparsers.add_parser('wallpaper')
+        wallpaper_parser = subparsers.add_parser('wallpaper', help='Operations with the wallpaper')
         wallpaper_parser.set_defaults(func=self.wallpaper)
 
         wallpaper_subparsers = wallpaper_parser.add_subparsers(dest='wallpaper_command')
         setup_wallpaper_parser = wallpaper_subparsers.add_parser('setup')
         setup_wallpaper_parser.add_argument(
-            '--strict', help='disable fuzzy finder then searching by title', action=argparse.BooleanOptionalAction, default='False')
+            '--strict', help='disable fuzzy finder then searching by title', action=argparse.BooleanOptionalAction, default=False)
         setup_wallpaper_parser.add_argument('name_or_id', help='Name or ID') 
         random_wallpaper_parser = wallpaper_subparsers.add_parser('random')
         random_wallpaper_parser.add_argument(
@@ -40,9 +40,15 @@ class Plugin:
         random_wallpaper_parser.add_argument(
             '--tags', help='Filter by tags specified in wallpaper description. Syntax: "--tags Nature,Anime,Game"')
         random_wallpaper_parser.add_argument(
-            '--nsfw', help='Add wallpapers with rating "Mature" into the mix', action=argparse.BooleanOptionalAction, default='False')
+            '--nsfw', help='Add wallpapers with rating "Mature" into the mix', action=argparse.BooleanOptionalAction, default=False)
 
-        settings_parser = subparsers.add_parser('settings')
+        wallpaper_subparsers.add_parser('name', help='get name of the current wallpaper')
+        wallpaper_subparsers.add_parser('accent', help='get accent color from the current wallpaper in uint8 RGB format')
+        wallpaper_subparsers.add_parser('get', help='print info about current wallpaper')
+        wallpaper_subparsers.add_parser('like', help='show this wallpaper twice more often then calling "random" method (max is x2)')
+        wallpaper_subparsers.add_parser('dislike', help='show this wallpaper half as often often then calling "random" method (min is x0.5)')
+            
+        settings_parser = subparsers.add_parser('settings', help="manipulate and view Wallpaper Engine's config file")
         settings_parser.set_defaults(func=self.settings)
         settings_subparsers = settings_parser.add_subparsers(dest='settings_command')
 
@@ -53,18 +59,18 @@ class Plugin:
         get_settings_parser = settings_subparsers.add_parser('get')
         get_settings_parser.add_argument('name', help='setting name')
 
-        update_parser = subparsers.add_parser('update')
+        update_parser = subparsers.add_parser('update', help='get the list of available wallpapers for this CLI')
         update_parser.set_defaults(func=self.update)
 
-        pull_parser = subparsers.add_parser('pull')
+        pull_parser = subparsers.add_parser('pull', help='get all configurations from Wallpaper Engine KDE widget')
         pull_parser.set_defaults(func=self.pull)
 
-        undo_parser = subparsers.add_parser('pull')
+        undo_parser = subparsers.add_parser('undo', help='revert current wallpaper and configurations to last working state')
         undo_parser.set_defaults(func=self.undo)
 
-        parser.add_argument('--version', action='version', version='%(prog)s 0.1.123')
+        parser.add_argument('--version', action='version', version='%(prog)s 0.5')
         parser.add_argument('--verbose', action=argparse.BooleanOptionalAction,
-                            help='Debug utility', default=False)
+                            help='debug utility', default=False) 
 
         args = parser.parse_args()
         dict_args = vars(args).copy()
@@ -121,6 +127,14 @@ class Plugin:
                     else:
                         print(f'{"  "*level} {name}="{val}"')
             recursion_dict_printer(wp_data)
+
+        elif kwargs['wallpaper_command'] == 'like':
+            wp_id, _ = self.wp_changer.get_last_id_name()
+            self.handler.add_subpos(wp_id, 'freq', 2.0)
+
+        elif kwargs['wallpaper_command'] == 'dislike':
+            wp_id, _ = self.wp_changer.get_last_id_name()
+            self.handler.add_subpos(wp_id, 'freq', 0.5)
 
     def undo(self, **kwargs):
         undoable_settings = self.settings_changer.settings_list

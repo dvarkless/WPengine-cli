@@ -62,6 +62,13 @@ class ConfigHandler:
         with open(self.config, 'w') as conf:
             json.dump(all_data, conf)
 
+    def add_subpos(self, id, subpos, data):
+        all_data = self.get_data()
+        all_data[id][subpos] = data
+
+        with open(self.config, 'w') as conf:
+            json.dump(all_data, conf)
+
     def remove_pos(self, name, /):
         all_data = self.get_data()
         try:
