@@ -131,10 +131,12 @@ class Plugin:
         elif kwargs['wallpaper_command'] == 'like':
             wp_id, _ = self.wp_changer.get_last_id_name()
             self.handler.add_subpos(wp_id, 'freq', 2.0)
+            print(f'I like this wallpaper! ({self.wp_changer.get_last_id_name()[1]})')
 
         elif kwargs['wallpaper_command'] == 'dislike':
             wp_id, _ = self.wp_changer.get_last_id_name()
             self.handler.add_subpos(wp_id, 'freq', 0.5)
+            print(f'Show less of ({self.wp_changer.get_last_id_name()[1]}) please')
 
     def undo(self, **kwargs):
         undoable_settings = self.settings_changer.settings_list

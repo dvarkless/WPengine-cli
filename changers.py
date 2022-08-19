@@ -196,7 +196,7 @@ class WallpaperChanger():
         weights = []
         for id in new_ids:
             try:
-                freq = all_data[id]['freq']
+                freq = float(all_data[id]['freq'])
             except KeyError:
                 freq = 1.0
             if id in last_ids:
