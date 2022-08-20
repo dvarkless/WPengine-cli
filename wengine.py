@@ -58,7 +58,7 @@ class Plugin:
         wallpaper_subparsers.add_parser(
             'name', help='get name of the current wallpaper')
         wallpaper_subparsers.add_parser(
-            'accent', help='get accent color from the current wallpaper in uint8 RGB format')
+            'accent', help='get accent color from the current wallpaper in hexadecimal RGB format')
         wallpaper_subparsers.add_parser(
             'get', help='print info about current wallpaper')
         wallpaper_subparsers.add_parser(
@@ -187,7 +187,7 @@ class Plugin:
             wp_data = self.handler.get_data(id)
             rgb_str = wp_data['general']['properties']['schemecolor']['value']
             rgb_vals = [int(float(val)*255) for val in rgb_str.split()]
-            output = "{} {} {}".format(*rgb_vals)
+            output = '#%02x%02x%02x' % tuple(rgb_vals)
             self.logger.info(f'program output = "{output}"')
             print(output)
 
