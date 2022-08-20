@@ -7,19 +7,7 @@ from config_handler import ConfigHandler
 
 
 class Plugin:
-    def __init__(self) -> None:
-        home_dir = Path().home()
-        if not home_dir.exists():
-            raise FileNotFoundError(
-                'Please setup your "$HOME" environment variable')
-        self.config_path = Path('~/.config/WPE-cli/config.json').expanduser()
-        self.handler = ConfigHandler(self.config_path)
-        self.steamdir = self.handler.get_data('SteamLibraryPath')
-
-        self.wp_changer = WallpaperChanger(self.steamdir, self.config_path)
-        self.settings_changer = SettingsChanger(
-            self.steamdir, self.config_path)
-        
+    def __init__(self) -> None:        
         # defining argument parser:
         parser = argparse.ArgumentParser(
             description='CLI for Wallpaper Engine KDE tool')
@@ -73,6 +61,27 @@ class Plugin:
                             help='debug utility', default=False) 
 
         args = parser.parse_args()
+        if args.verbose:
+            self.print_log = True
+        else:
+            sys.tracebacklimit = 0
+            self.print_log = False
+        
+        home_dir = Path().home()
+        if not home_dir.exists():
+            raise FileNotFoundError(
+                'Please setup your "$HOME" environment variable')
+        self.config_path = Path('~/.config/WPE-cli/config.json').expanduser()
+        self.handler = ConfigHandler(self.config_path)
+        self.steamdir = self.handler.get_data('SteamLibraryPath')
+
+        self.wp_changer = WallpaperChanger(self.steamdir, self.config_path)
+        self.settings_changer = SettingsChanger(
+            self.steamdir, self.config_path)
+
+        self.handler = ConfigHandler(self.config_path)
+        self.wp_changer = WallpaperChanger(self.steamdir, self.config_path)
+
         dict_args = vars(args).copy()
         dict_args.pop('func')
         dict_args.pop('command')
