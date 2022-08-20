@@ -1,11 +1,14 @@
 import json
+import logging
 import os
 import re
 from difflib import SequenceMatcher
+from logging import handlers as log_handlers
 from pathlib import Path
 from random import choices
 
 from config_handler import ConfigHandler
+from constants import LOG_PATH
 
 
 class SettingsChanger():
@@ -13,9 +16,22 @@ class SettingsChanger():
         r".+\[Wallpaper\]\[com\.github\.casout\.wallpaperEngineKde\]\[General\]"
     __kde_config_path = Path(
         "~/.config/plasma-org.kde.plasma.desktop-appletsrc").expanduser()
-    def __init__(self, steampath, config_path) -> None:
+
+    def __init__(self, steampath, logging_handler=None) -> None:
+        if logging_handler is None:
+            formatter = logging.Formatter(
+                '%(asctime)s - [%(levelname)s] - [%(module)s] - "%(message)s"')
+            file_handler = log_handlers.TimedRotatingFileHandler(
+                LOG_PATH, when='D', interval=7, backupCount=3)
+            file_handler.setFormatter(formatter)
+            logging_handler = file_handler
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(logging_handler)
+
         self._steampath = Path(steampath)
-        self.handler = ConfigHandler(config_path)
+        self.handler = ConfigHandler(
+            logging_handler=logging_handler)
 
         wpe_id = self.handler.get_data('WallpaperEngineSteamID')
         self.project_name = self.handler.get_data('WallpaperProjectName')
@@ -47,6 +63,7 @@ class SettingsChanger():
 
     @property
     def settings_list(self):
+        self.logger.debug('get settings list')
         return list(self.name_to_pattern.keys())
 
     @settings_list.setter
@@ -54,17 +71,30 @@ class SettingsChanger():
         pass
 
     def setup(self, name, val):
+        self.logger.debug(
+            f'called method [setup] with arguments (name={name}, val={val})')
         if not (name in self.name_to_pattern.keys()):
-            raise KeyError(f'Passed name - "{name}" is an unknown setting')
+            error_msg = f'Passed name - "{name}" is an unknown setting'
+            self.logger.error(
+                f'Hangled exception: "{error_msg}", program finished')
+            raise KeyError(error_msg)
         if not self.name_type_check[name](val):
-            raise ValueError(f'Invalid value ({val}) for setting "{name}"')
+            error_msg = f'Invalid value ({val}) for setting "{name}"'
+            self.logger.error(
+                f'Hangled exception: "{error_msg}", program finished')
+            raise ValueError(error_msg)
 
         self.handler.send_cmd(name, val)
 
     def read(self, setting=None):
+        self.logger.debug(
+            f'called method [read] with arguments (setting={setting})')
         if setting is not None:
             if setting not in self.name_to_pattern.keys():
-                raise KeyError(f"Bad setting name - '{setting}'")
+                error_msg = f"Bad setting name - '{setting}'"
+                self.logger.error(
+                    f'Hangled exception: "{error_msg}", program finished')
+                raise KeyError(error_msg)
 
         return_list = []
         chapter_end_pattern = re.compile(r"\n\n")
@@ -84,24 +114,40 @@ class SettingsChanger():
                         return_list.append((name, match.group(1)))
 
                 if chapter_end_pattern.match(line):
-                    break # Used to not possibly overwrite found settings
-
+                    break  # Used to not possibly overwrite found settings
+        self.logger.debug(f'returning value ({return_list})')
         return return_list
 
     def get_start_line(self):
+        self.logger.debug(f'called method [get_start_line]')
         pattern = re.compile(SettingsChanger.__header_regex)
         with open(SettingsChanger.__kde_config_path, 'r') as file:
             for i, line in enumerate(file):
                 if pattern.match(line):
+                    self.logger.debug(f'returning value ({i})')
                     return i
             else:
-                raise ValueError(
-                    "WallpaperEngine settings are not found in plasma config")
+                error_msg = "WallpaperEngine settings are not found in plasma config"
+                self.logger.error(
+                    f'Hangled exception: "{error_msg}", program finished')
+                raise ValueError(error_msg)
 
 
 class WallpaperChanger():
-    def __init__(self, steampath, config_path) -> None:
-        self.handler = ConfigHandler(config_path)
+    def __init__(self, steampath, logging_handler=None) -> None:
+        if logging_handler is None:
+            formatter = logging.Formatter(
+                '%(asctime)s - [%(levelname)s] - [%(module)s] - "%(message)s"')
+            file_handler = log_handlers.TimedRotatingFileHandler(
+                LOG_PATH, when='D', interval=7, backupCount=3)
+            file_handler.setFormatter(formatter)
+            logging_handler = file_handler
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(logging_handler)
+
+        self.handler = ConfigHandler(
+            logging_handler=logging_handler)
         self._steampath = Path(steampath)
 
         wpe_id = self.handler.get_data('WallpaperEngineSteamID')
@@ -110,25 +156,35 @@ class WallpaperChanger():
             Path('steamapps/workshop/content') / wpe_id
 
     def get_data(self, wp_path: Path, files: list):
+        self.logger.debug(
+            'called method [get_data] with arguments (wp_path={wp_path}, files={files})')
         if self.project_name in files:
             with open(Path(wp_path) / self.project_name, 'r') as file:
                 data = json.load(file)
                 self.handler.add_pos(Path(wp_path).name, data)
 
     def get_all_data(self):
+        self.logger.debug(f'called method [get_all_data]')
         for root, _, files in os.walk(self.full_path):
             self.get_data(Path(root), files)
 
     def get_last_id_name(self):
+        self.logger.debug('called method [get_last_id_name]')
         data = self.handler.get_data()
         id = data['last_id']
         try:
             name = data[id]['title']
         except:
-            raise FileNotFoundError(f'Could not find a wallpaper by id:{id}')
+            error_msg = f'Could not find a wallpaper by id:{id}'
+            self.logger.error(
+                f'Hangled exception: "{error_msg}", program finished')
+            raise FileNotFoundError(error_msg)
+        self.logger.debug(f'returning value ({(id, name)})')
         return id, name
 
     def setup(self, name, *, silent_delete=False, fuzzy=True):
+        self.logger.debug(
+            f'called method [setup] with arguments (name={name}, silent_delete={silent_delete}, fuzzy={fuzzy})')
         if type(name) in (tuple, list, set):
             name = name[0]
         name_id = None
@@ -148,7 +204,7 @@ class WallpaperChanger():
         else:
             if not compare_results:
                 raise KeyError(f'Bad name or id: "{name}"')
-            else: 
+            else:
                 compare_results.sort(key=lambda x: x[1], reverse=True)
                 name_id = compare_results[0][0]
 
@@ -168,7 +224,7 @@ class WallpaperChanger():
         # wp_path.as_uri() breaks encoding
         self.handler.send_cmd('WallpaperSource', 'file://'+str(wp_path))
         self.handler.update_last_ids(id)
-    
+
     def _parse_into_str(self, data, name):
         out = data.get(name, 'Unspecified')
         if isinstance(out, list):
@@ -179,18 +235,22 @@ class WallpaperChanger():
             return str(out)
 
     def setup_random(self, *, filters={}, fuzzy=True):
+        self.logger.debug(
+            f'called method [setup_random] with arguments (filters={filters}, fuzzy={fuzzy})')
         wp_ids = self.handler.get_ids()
         all_data = self.handler.get_data()
         new_ids = {}
         for id, data in wp_ids.items():
             # Check if value in data also contains in filters
-            if all([self._parse_into_str(data, name) in val for name, val in filters.items()]): 
+            if all([self._parse_into_str(data, name) in val for name, val in filters.items()]):
                 new_ids[id] = data
         if not filters:
             new_ids = wp_ids
         if not new_ids:
-            raise ValueError(
-                f"Could not find wallpapers with this filters: {filters}")
+            error_msg = f"Could not find wallpapers with this filters: {filters}"
+            self.logger.error(
+                f'Hangled exception: "{error_msg}", program finished')
+            raise ValueError(error_msg)
 
         last_ids = self.handler.get_data('prev_ids')
         weights = []
@@ -205,6 +265,6 @@ class WallpaperChanger():
                 weights.append(freq)
 
         if self.setup(choices(list(new_ids.keys()), weights=weights), silent_delete=True, fuzzy=fuzzy):
-            print(
+            self.logger.info(
                 f'setup_random failed because got non-existent id, recursive calling itself again')
             self.setup_random(filters=filters, fuzzy=fuzzy)
