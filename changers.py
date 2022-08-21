@@ -215,15 +215,15 @@ class WallpaperChanger():
         wp_path = self.full_path / Path(name_id) / Path(tail)
         if not Path(self.full_path / Path(name_id)).exists():
             if silent_delete:
-                self.handler.remove_pos(id)
+                self.handler.remove_pos(name_id)
                 return True
             else:
                 print(f'error path: "{wp_path}"')
                 raise KeyError(
-                    f'This id not exists: "{id}" with name "{name}"')
+                    f'This id not exists: "{name_id}" with name "{name}"')
         # wp_path.as_uri() breaks encoding
         self.handler.send_cmd('WallpaperSource', 'file://'+str(wp_path))
-        self.handler.update_last_ids(id)
+        self.handler.update_last_ids(name_id)
 
     def _parse_into_str(self, data, name):
         out = data.get(name, 'Unspecified')
