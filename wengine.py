@@ -190,7 +190,13 @@ class Plugin:
             self.logger.debug('wallpaper accent')
             id, _ = self.wp_changer.get_last_id_name()
             wp_data = self.handler.get_data(id)
-            rgb_str = wp_data['general']['properties']['schemecolor']['value']
+            try:
+                rgb_str = wp_data['general']['properties']['schemecolor']['value']
+            except TypeError:
+                self.logger.error(
+                    'this wallpaper doesn\'t have a scheme color')
+                print('ERROR: this wallpaper doesn\'t have a scheme color')
+                exit(1)
             rgb_vals = [int(float(val)*255) for val in rgb_str.split()]
             output = '#%02x%02x%02x' % tuple(rgb_vals)
             self.logger.info(f'program output = "{output}"')
@@ -227,10 +233,16 @@ class Plugin:
             self.logger.info(output)
             print(output)
 
-        if kwargs['apply_accent_color']:
+        if kwargs.get('apply_accent_color', False):
             id, _ = self.wp_changer.get_last_id_name()
             wp_data = self.handler.get_data(id)
-            rgb_str = wp_data['general']['properties']['schemecolor']['value']
+            try:
+                rgb_str = wp_data['general']['properties']['schemecolor']['value']
+            except TypeError:
+                self.logger.error(
+                    'this wallpaper doesn\'t have a scheme color')
+                print('ERROR: this wallpaper doesn\'t have a scheme color')
+                exit(1)
             rgb_vals = [int(float(val)*255) for val in rgb_str.split()]
             output = '#%02x%02x%02x' % tuple(rgb_vals)
             self.handler.execute_script(
