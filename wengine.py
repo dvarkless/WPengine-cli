@@ -134,7 +134,7 @@ class Plugin:
         dict_args.pop('command')
         args.func(**dict_args)
 
-        self.logger.info('program finished with exit code 0')
+        self.logger.info('program finished with sys.exit code 0')
 
     def config(self, **kwargs):
         self.logger.info(f'called method [config] with arguments: ({kwargs})')
@@ -196,7 +196,7 @@ class Plugin:
                 self.logger.error(
                     'this wallpaper doesn\'t have a scheme color')
                 print('ERROR: this wallpaper doesn\'t have a scheme color')
-                exit(1)
+                sys.exit(1)
             rgb_vals = [int(float(val)*255) for val in rgb_str.split()]
             output = '#%02x%02x%02x' % tuple(rgb_vals)
             self.logger.info(f'program output = "{output}"')
@@ -242,7 +242,7 @@ class Plugin:
                 self.logger.error(
                     'this wallpaper doesn\'t have a scheme color')
                 print('ERROR: this wallpaper doesn\'t have a scheme color')
-                exit(1)
+                sys.exit(1)
             rgb_vals = [int(float(val)*255) for val in rgb_str.split()]
             output = '#%02x%02x%02x' % tuple(rgb_vals)
             self.handler.execute_script(

@@ -1,8 +1,9 @@
 import json
 import logging
+import os
+import sys
 from logging import handlers as log_handlers
 from pathlib import Path
-import os
 
 import dbus
 
@@ -38,19 +39,22 @@ class ConfigHandler:
             if result == 'y':
                 self.write_template()
             else:
-                self.logger.info('program finished with exit code 1')
-                exit(1)
+                self.logger.info('program finished with sys.exit code 1')
+                sys.exit(1)
 
     def get_data(self, key=None):
-        self.logger.debug(f'called method [get_data] with arguments (key={key})')
+        self.logger.debug(
+            f'called method [get_data] with arguments (key={key})')
         with open(CONFIG_PATH, 'r') as conf:
             data = json.load(conf)
             self.logger.debug('json load')
         if key is None:
-            self.logger.debug(f'returning value (all data with len={len(data)}')
+            self.logger.debug(
+                f'returning value (all data with len={len(data)}')
             return data
         else:
-            self.logger.debug(f'returning value (data[key] with {len(data[key])} positions)')
+            self.logger.debug(
+                f'returning value (data[key] with {len(data[key])} positions)')
             return data[key]
 
     def get_ids(self):
@@ -73,7 +77,8 @@ class ConfigHandler:
         return data
 
     def update_last_ids(self, id, /):
-        self.logger.debug(f'called method [update_last_ids] with arguments (id={id})')
+        self.logger.debug(
+            f'called method [update_last_ids] with arguments (id={id})')
         prev_ids = self.get_data('prev_ids')
         prev_ids.pop(0)
         prev_ids.append(id)
@@ -81,7 +86,8 @@ class ConfigHandler:
         self.add_pos('last_id', id)
 
     def add_pos(self, id, data):
-        self.logger.debug(f'called method [add_pos] with arguments (id={id}, data=data with len={len(data)})')
+        self.logger.debug(
+            f'called method [add_pos] with arguments (id={id}, data=data with len={len(data)})')
         all_data = self.get_data()
         self.logger.debug(f'in position ({id}) add value ({data})')
         all_data[id] = data
@@ -91,9 +97,11 @@ class ConfigHandler:
             self.logger.debug('json dump')
 
     def add_subpos(self, id, subpos, data):
-        self.logger.debug(f'called method [add_subpos] with arguments (id={id}, subpos={subpos}, data={data})')
+        self.logger.debug(
+            f'called method [add_subpos] with arguments (id={id}, subpos={subpos}, data={data})')
         all_data = self.get_data()
-        self.logger.debug(f'in position ({id}), subposition ({subpos}) add value ({data})')
+        self.logger.debug(
+            f'in position ({id}), subposition ({subpos}) add value ({data})')
         all_data[id][subpos] = data
 
         with open(CONFIG_PATH, 'w') as conf:
@@ -101,7 +109,8 @@ class ConfigHandler:
             self.logger.debug('json dump')
 
     def remove_pos(self, name, /):
-        self.logger.debug(f'called method [remove_pos] with arguments (name={name})')
+        self.logger.debug(
+            f'called method [remove_pos] with arguments (name={name})')
         all_data = self.get_data()
         try:
             self.logger.info(f'remove ({all_data[name]})')
@@ -116,7 +125,8 @@ class ConfigHandler:
             self.logger.debug('json dump')
 
     def send_cmd(self, id, val):
-        self.logger.debug(f'called method [send_cmd] with arguments (id={id}, val={val})')
+        self.logger.debug(
+            f'called method [send_cmd] with arguments (id={id}, val={val})')
         script = """
         for (d of desktops()) {
             d.wallpaperPlugin = "com.github.casout.wallpaperEngineKde";
@@ -131,8 +141,11 @@ class ConfigHandler:
 
     def execute_script(self, executer: str, *args: str):
         # i'm sorry for this lambda statement
-        args = tuple(map(lambda x: f'"{x}"' if x.startswith('#') or (" " in x) else x, args))
-        self.logger.debug(f'called method [send_cmd] with arguments (executer={executer}, args={args})')
+        # check if shell will count argument as command or smth and wrap this arg in quotes if so
+        args = tuple(map(lambda x: f'"{x}"' if x.startswith(
+            '#') or (" " in x) else x, args))
+        self.logger.debug(
+            f'called method [send_cmd] with arguments (executer={executer}, args={args})')
         os.system(" ".join((executer, *args)))
         self.logger.info(f'execute script "{" ".join((executer, *args))}"')
 
