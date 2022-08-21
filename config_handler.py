@@ -2,6 +2,7 @@ import json
 import logging
 from logging import handlers as log_handlers
 from pathlib import Path
+import os
 
 import dbus
 
@@ -127,6 +128,13 @@ class ConfigHandler:
         plasma = dbus.Interface(bus.get_object(
             'org.kde.plasmashell', '/PlasmaShell'), dbus_interface='org.kde.PlasmaShell')
         plasma.evaluateScript(script)
+
+    def execute_script(self, executer: str, *args: str):
+        # i'm sorry for this lambda statement
+        args = tuple(map(lambda x: f'"{x}"' if x.startswith('#') or (" " in x) else x, args))
+        self.logger.debug(f'called method [send_cmd] with arguments (executer={executer}, args={args})')
+        os.system(" ".join((executer, *args)))
+        self.logger.info(f'execute script "{" ".join((executer, *args))}"')
 
     def write_template(self):
         self.logger.debug(f'called method [write_template]')

@@ -14,7 +14,7 @@ sys.excepthook = handle_exception
 formatter = logging.Formatter(
     '%(asctime)s - [%(levelname)s] - [%(module)s] - "%(message)s"')
 logging_handler = log_handlers.TimedRotatingFileHandler(
-    LOG_PATH, when='D', interval=7, backupCount=3)
+    LOG_PATH, when='D', interval=2, backupCount=3)
 logging_handler.setFormatter(formatter)
 
 
@@ -45,6 +45,8 @@ class Plugin:
         setup_wallpaper_parser.add_argument(
             '--strict', help='disable fuzzy finder then searching by title', action=argparse.BooleanOptionalAction, default=False)
         setup_wallpaper_parser.add_argument('name_or_id', help='Name or ID')
+        setup_wallpaper_parser.add_argument('--apply-accent-color', help='Apply accent color from wallpaper config in your KDE plasma',
+                                            action=argparse.BooleanOptionalAction, default=False)
         random_wallpaper_parser = wallpaper_subparsers.add_parser('random')
         random_wallpaper_parser.add_argument(
             '--type', help='Type of wallpapers to choose from. Syntax: "--type scene,video,web"', choices=['scene', 'video', 'web'])
@@ -54,11 +56,14 @@ class Plugin:
             '--tags', help='Filter by tags specified in wallpaper description. Syntax: "--tags Nature,Anime,Game"')
         random_wallpaper_parser.add_argument(
             '--nsfw', help='Add wallpapers with rating "Mature" into the mix', action=argparse.BooleanOptionalAction, default=False)
-
+        random_wallpaper_parser.add_argument('--apply-accent-color', help='Apply accent color from wallpaper config in your KDE plasma',
+                                             action=argparse.BooleanOptionalAction, default=False)
         wallpaper_subparsers.add_parser(
             'name', help='get name of the current wallpaper')
-        wallpaper_subparsers.add_parser(
+        accent_parser = wallpaper_subparsers.add_parser(
             'accent', help='get accent color from the current wallpaper in hexadecimal RGB format')
+        accent_parser.add_argument('--apply-accent-color', help='Apply accent color from wallpaper config in your KDE plasma',
+                                   action=argparse.BooleanOptionalAction, default=False)
         wallpaper_subparsers.add_parser(
             'get', help='print info about current wallpaper')
         wallpaper_subparsers.add_parser(
@@ -81,8 +86,8 @@ class Plugin:
         get_settings_parser.add_argument('name', help='setting name')
 
         update_parser = subparsers.add_parser(
-            'update', help='get the list of available wallpapers for this CLI')
-        update_parser.set_defaults(func=self.update)
+            'update_list', help='receive the list of available wallpapers from workshop folder for this CLI')
+        update_parser.set_defaults(func=self.update_list)
 
         pull_parser = subparsers.add_parser(
             'pull', help='get all configurations from Wallpaper Engine KDE widget')
@@ -222,6 +227,15 @@ class Plugin:
             self.logger.info(output)
             print(output)
 
+        if kwargs['apply_accent_color']:
+            id, _ = self.wp_changer.get_last_id_name()
+            wp_data = self.handler.get_data(id)
+            rgb_str = wp_data['general']['properties']['schemecolor']['value']
+            rgb_vals = [int(float(val)*255) for val in rgb_str.split()]
+            output = '#%02x%02x%02x' % tuple(rgb_vals)
+            self.handler.execute_script(
+                'plasma-apply-colorscheme', '--accent-color', output)
+
     def undo(self, **kwargs):
         self.logger.info(f'called method [undo] with arguments: ({kwargs})')
         undoable_settings = self.settings_changer.settings_list
@@ -231,8 +245,9 @@ class Plugin:
             val = self.handler.get_data(name)
             self.settings_changer.setup(name, val)
 
-    def update(self, **kwargs):
-        self.logger.info(f'called method [update] with arguments: ({kwargs})')
+    def update_list(self, **kwargs):
+        self.logger.info(
+            f'called method [update_list] with arguments: ({kwargs})')
         self.wp_changer.get_all_data()
 
     def settings(self, **kwargs):
