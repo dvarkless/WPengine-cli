@@ -78,9 +78,8 @@ class Plugin:
             dest='settings_command')
 
         setup_settings_parser = settings_subparsers.add_parser('setup')
-        name_setup_settings_parser = setup_settings_parser.add_subparsers(
-            dest='subcommand').add_parser('name')
-        name_setup_settings_parser.add_argument('value')
+        setup_settings_parser.add_argument('name')
+        setup_settings_parser.add_argument('value')
 
         get_settings_parser = settings_subparsers.add_parser('get')
         get_settings_parser.add_argument('name', help='setting name')
@@ -135,13 +134,6 @@ class Plugin:
         args.func(**dict_args)
 
         self.logger.info('program finished with sys.exit code 0')
-
-    def config(self, **kwargs):
-        self.logger.info(f'called method [config] with arguments: ({kwargs})')
-        if kwargs['command'] == 'setup':
-            pass
-        elif kwargs['command'] == 'get':
-            pass
 
     def pull(self, **kwargs):
         self.logger.info(f'called method [pull] with arguments: ({kwargs})')
@@ -243,8 +235,15 @@ class Plugin:
                     'this wallpaper doesn\'t have a scheme color')
                 print('ERROR: this wallpaper doesn\'t have a scheme color')
                 sys.exit(1)
-            rgb_vals = [int(float(val)*255) for val in rgb_str.split()]
-            output = '#%02x%02x%02x' % tuple(rgb_vals)
+            rgb_vals = tuple([int(float(val)*255) for val in rgb_str.split()])
+            if rgb_vals == (0,0,0):
+                try:
+                    output = self.handler.get_data('default_color')
+                except KeyError:
+                    self.logger.info('Cannot access "default color" property')
+                    sys.exit(1)
+            else:
+                output = '#%02x%02x%02x' % rgb_vals
             self.handler.execute_script(
                 'plasma-apply-colorscheme', '--accent-color', output)
 
@@ -266,9 +265,9 @@ class Plugin:
         self.logger.info(
             f'called method [settings] with arguments: ({kwargs})')
         if kwargs['settings_command'] == 'setup':
-            self.settings_changer.setup(kwargs['subcommand'], kwargs['val'])
+            self.settings_changer.setup(kwargs['name'], kwargs['value'])
         elif kwargs['settings_command'] == 'get':
-            output = self.settings_changer.read(kwargs['subcommand'])
+            output = self.settings_changer.read(kwargs['name'])
             self.logger.info(output)
             print(output)
 

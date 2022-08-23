@@ -73,28 +73,23 @@ class SettingsChanger():
     def setup(self, name, val):
         self.logger.debug(
             f'called method [setup] with arguments (name={name}, val={val})')
-        if not (name in self.name_to_pattern.keys()):
-            error_msg = f'Passed name - "{name}" is an unknown setting'
-            self.logger.error(
-                f'Hangled exception: "{error_msg}", program finished')
-            raise KeyError(error_msg)
-        if not self.name_type_check[name](val):
-            error_msg = f'Invalid value ({val}) for setting "{name}"'
-            self.logger.error(
-                f'Hangled exception: "{error_msg}", program finished')
-            raise ValueError(error_msg)
-
-        self.handler.send_cmd(name, val)
+        if name in self.name_to_pattern.keys():
+            if not self.name_type_check[name](val):
+                error_msg = f'Invalid value ({val}) for setting "{name}"'
+                self.logger.error(
+                    f'Hangled exception: "{error_msg}", program finished')
+                raise ValueError(error_msg)
+            
+            self.handler.send_cmd(name, val)
+        else:
+            self.handler.add_pos(name, val)
 
     def read(self, setting=None):
         self.logger.debug(
             f'called method [read] with arguments (setting={setting})')
         if setting is not None:
             if setting not in self.name_to_pattern.keys():
-                error_msg = f"Bad setting name - '{setting}'"
-                self.logger.error(
-                    f'Hangled exception: "{error_msg}", program finished')
-                raise KeyError(error_msg)
+                return self.handler.get_data(setting)
 
         return_list = []
         chapter_end_pattern = re.compile(r"\n\n")

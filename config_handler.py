@@ -51,7 +51,10 @@ class ConfigHandler:
         else:
             self.logger.debug(
                 f'returning value (data[key] with {len(data[key])} positions)')
-            return data[key]
+            try:
+                return data[key]
+            except KeyError:
+                raise KeyError(f'Passed key = "{key}" is unknown')
 
     def get_ids(self):
         self.logger.debug('called method [get_ids]')
