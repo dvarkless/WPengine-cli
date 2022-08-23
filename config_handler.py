@@ -34,13 +34,9 @@ class ConfigHandler:
         self.logger.addHandler(logging_handler)
 
         if not CONFIG_PATH.exists():
-            print(f'Could not find a configuration file at "{CONFIG_PATH}"')
-            result = input("Create a new config? y/n \n")
-            if result == 'y':
-                self.write_template()
-            else:
-                self.logger.info('program finished with sys.exit code 1')
-                sys.exit(1)
+            self.logger.info('config file is not found, creating a new one')
+            print('config file is not found, creating a new one')
+            self.write_template()
 
     def get_data(self, key=None):
         self.logger.debug(
@@ -141,7 +137,7 @@ class ConfigHandler:
 
     def execute_script(self, executer: str, *args: str):
         # i'm sorry for this lambda statement
-        # check if shell will count argument as command or smth and wrap this arg in quotes if so
+        # check if shell will count argument as a command and wrap this arg in quotes if so
         args = tuple(map(lambda x: f'"{x}"' if x.startswith(
             '#') or (" " in x) else x, args))
         self.logger.debug(
