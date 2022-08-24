@@ -85,7 +85,7 @@ class Plugin:
         get_settings_parser.add_argument('name', help='setting name')
 
         update_parser = subparsers.add_parser(
-            'update_list', help='receive the list of available wallpapers from workshop folder for this CLI')
+            'update-list', help='receive the list of available wallpapers from workshop folder for this CLI')
         update_parser.set_defaults(func=self.update_list)
 
         pull_parser = subparsers.add_parser(
