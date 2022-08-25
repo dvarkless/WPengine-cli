@@ -25,6 +25,16 @@ Update the list of installed wallpapers on your system (Call this each time then
   ```
     python wengine.py update-list 
   ```
+#### Optional:
+if you want to create a binary file and install it in your system, install `pyinstaller` module and run `install.sh`
+   ```
+      pip install pyinstaller
+      ./install.sh
+   ```
+This allows you to call this script without python, for example:
+   ```
+      wengine update-list
+   ```
 
 ## Usage
 ### Setup a wallpaper
