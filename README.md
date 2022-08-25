@@ -56,9 +56,9 @@ Let's setup a random wallpaper:
     python wengine.py wallpaper random
   ```
 You can also use filters to get a wallpaper of a specific type, theme or age rating.
-- `--type` wallpaper type choosen from: `(Video,Scene,Web)`
+- `--type` wallpaper type chosen from: `(Video,Scene,Web)`
 - `--tags` main tag of the wallpaper, for example:`(Landscape,Cars,Anime)` and so on.
-- `--contentrating` specify age rating of the wallpapers, choosen from: `(Everyone,Questionable,Mature)`.  
+- `--contentrating` specify age rating of the wallpapers, chosen from: `(Everyone,Questionable,Mature)`.  
 NOTE: rating `Mature` is filtered out by default  
 Usage example:
   ```
@@ -68,7 +68,7 @@ Usage example:
 ### Apply accent color of the wallpaper to your system
 You can see the effect of this feature in the lower left-hand corner of this gif:
 ![accent_color_preview](https://user-images.githubusercontent.com/78558029/186417741-19398c86-f184-400a-a862-3dcc3f79acba.gif)  
-Before applying an accent color, I recomend you to define a default accent color, because many wallpapers on the steam workshop have a #000000 schemecolor, which is not in sync wallpapers and looks bad.
+Before applying an accent color, I recommend you to define a default accent color, because many wallpapers on the steam workshop have a #000000 schemecolor, which is not in sync wallpapers and looks bad.
   ```
     python wengine.py settings setup default_color "#213658"
   ```
