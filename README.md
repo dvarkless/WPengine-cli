@@ -1,6 +1,16 @@
+
+
+<div align="center">
+
 # WPengine-cli
+
 Custom command line interface for Wallpaper Engine for KDE widget
 
+[Installation](#installation-and-post-install) •
+[Usage](#usage) •
+[Contribute](#contributions)
+</div>
+   
 ![setup_random_preview](https://user-images.githubusercontent.com/78558029/186255486-803f991a-5ce6-42c2-b977-09c684eb1d7d.gif)
 
 ## About The Project
@@ -12,7 +22,7 @@ There is also additional features like changing the accent color of your desktop
 - [Wallpaper Engine Plugin for KDE Plasma](https://github.com/catsout/wallpaper-engine-kde-plugin)
 - Python3 
 
-### Installation & Post-install
+### Installation And Post-install
    ```
     git clone https://github.com/dvarkless/WPengine-cli.git
   ```  
@@ -93,6 +103,12 @@ Get all the available commands:
     python wengine.py --help
     python wengine.py wallpaper --help
   ```
+## Contributions
+Feel free to contribute to this project. I'll be glad to accept your pull requests.
+There are several issues with the program that come to my mind right now:
+- Handle typically occuring unhandled errors. Basically, add more `try except` statements and convert all `raise` keywords to `print(error_msg); sys.exit(1)`
+- Test program on plasma linux systems other than Manjaro. (Arch, Kubuntu, Fedora and others)
+- Create binaries for this systems.
 ## License
 
 Distributed under the MIT License. See `LICENSE.txt` for more information.
