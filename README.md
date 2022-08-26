@@ -106,7 +106,7 @@ Get all the available commands:
 ## Contributions
 Feel free to contribute to this project. I'll be glad to accept your pull requests.
 There are several issues with the program that come to my mind right now:
-- Handle typically occuring unhandled errors. Basically, add more `try except` statements and convert all `raise` keywords to `print(error_msg); sys.exit(1)`
+- Handle typically ocuring unhandled errors. Basically, add more `try except` statements and convert all `raise` keywords to `print(error_msg); sys.exit(1)`
 - Test program on plasma linux systems other than Manjaro. (Arch, Kubuntu, Fedora and others)
 - Create binaries for this systems.
 ## License
