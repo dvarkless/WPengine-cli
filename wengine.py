@@ -60,6 +60,8 @@ class Plugin:
                                              action=argparse.BooleanOptionalAction, default=False)
         wallpaper_subparsers.add_parser(
             'name', help='get name of the current wallpaper')
+        wallpaper_subparsers.add_parser(
+            'id', help='get id of the current wallpaper')
         accent_parser = wallpaper_subparsers.add_parser(
             'accent', help='get accent color from the current wallpaper in hexadecimal RGB format')
         accent_parser.add_argument('--apply-accent-color', help='Apply accent color from wallpaper config in your KDE plasma',
@@ -178,6 +180,12 @@ class Plugin:
             self.logger.info(f'program output = "{output}"')
             print(output)
 
+        elif kwargs['wallpaper_command'] == 'id':
+            self.logger.debug(f'wallpaper id')
+            id, name = self.wp_changer.get_last_id_name()
+            self.logger.info(f'program output = "{id}"')
+            print(id)
+
         elif kwargs['wallpaper_command'] == 'accent':
             self.logger.debug('wallpaper accent')
             id, _ = self.wp_changer.get_last_id_name()
@@ -236,7 +244,7 @@ class Plugin:
                 print('ERROR: this wallpaper doesn\'t have a scheme color')
                 sys.exit(1)
             rgb_vals = tuple([int(float(val)*255) for val in rgb_str.split()])
-            if rgb_vals == (0,0,0):
+            if rgb_vals == (0, 0, 0):
                 try:
                     output = self.handler.get_data('default_color')
                 except KeyError:

@@ -79,7 +79,7 @@ class SettingsChanger():
                 self.logger.error(
                     f'Hangled exception: "{error_msg}", program finished')
                 raise ValueError(error_msg)
-            
+
             self.handler.send_cmd(name, val)
         else:
             self.handler.add_pos(name, val)
@@ -143,6 +143,8 @@ class WallpaperChanger():
 
         self.handler = ConfigHandler(
             logging_handler=logging_handler)
+        self.settings_changer = SettingsChanger(
+            steampath, logging_handler=None)
         self._steampath = Path(steampath)
 
         wpe_id = self.handler.get_data('WallpaperEngineSteamID')
@@ -152,7 +154,7 @@ class WallpaperChanger():
 
     def get_data(self, wp_path: Path, files: list):
         self.logger.debug(
-            'called method [get_data] with arguments (wp_path={wp_path}, files={files})')
+            f'called method [get_data] with arguments (wp_path={wp_path}, files={files})')
         if self.project_name in files:
             with open(Path(wp_path) / self.project_name, 'r') as file:
                 data = json.load(file)
@@ -165,11 +167,11 @@ class WallpaperChanger():
 
     def get_last_id_name(self):
         self.logger.debug('called method [get_last_id_name]')
+        id = self.settings_changer.read('WallpaperWorkShopId')
         data = self.handler.get_data()
-        id = data['last_id']
         try:
             name = data[id]['title']
-        except:
+        except KeyError:
             error_msg = f'Could not find a wallpaper by id:{id}'
             self.logger.error(
                 f'Hangled exception: "{error_msg}", program finished')

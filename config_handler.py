@@ -68,7 +68,8 @@ class ConfigHandler:
         for name in to_remove:
             del data[name]
         if not data:
-            error_msg = f"Cannot find wallpapers in config file, did you call 'wengine update'?"
+            error_msg = "Cannot find wallpapers in config file"
+            error_msg += ", did you call 'wengine update-list'?"
             self.logger.error(
                 f'Hangled exception: "{error_msg}", program finished')
             raise ValueError(error_msg)
